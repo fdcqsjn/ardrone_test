@@ -1,6 +1,6 @@
 //本程序发布控制命令到cmd_vel主题
 #include <ros/ros.h>  //标准的ROS类的声明,每个程序都需要
-#include <std_msgs/Empty.h>  //用到的消息类型的声明的头文件
+#include <std_msgs/Empty.h>  //用到的消息类型的声明的 头文件
 #include <geometry_msgs/Twist.h>//
 
 	geometry_msgs::Twist twist_msg;
@@ -8,8 +8,6 @@
 	geometry_msgs::Twist twist_msg_pshover;
 	std_msgs::Empty emp_msg; 
 	//使用范围解析运算符(::)重定义全局类的对象
-	
-
 int main(int argc, char** argv)
 {
                     
@@ -23,31 +21,16 @@ int main(int argc, char** argv)
 	ros::Publisher pub_twist;
 	ros::Publisher pub_empty_takeoff;
 	ros::Publisher pub_empty_reset;
-	double time;
-
 //赋值悬停控制消息类型域的包含的数据成员
 			twist_msg_hover.linear.x=0.0; 
 			twist_msg_hover.linear.y=0.0;
 			twist_msg_hover.linear.z=0.0;
 			twist_msg_hover.angular.x=0.0; 
 			twist_msg_hover.angular.y=0.0;
-
-//赋值退出悬停控制时消息类型域包含的数据成员
-			twist_msg_pshover.linear.x=0.00001; // 输入一个很小的值来退出悬停模式
-			twist_msg_pshover.linear.y=0.0;
-			twist_msg_pshover.linear.z=0.0;
-			twist_msg_pshover.angular.x=0.0; 
-			twist_msg_pshover.angular.y=0.0;
-			twist_msg_pshover.angular.z=0.0; 
-
-
-			float fly_time=9.0;
-			float land_time=5.0;
-			float kill_time =2.0;
-				
+			
 //赋值控制飞行数据类型域包含的数据成员 让飞行器绕Yaw轴旋转
 			twist_msg.linear.x=0.0; 
-			twist_msg.linear.y=-0.0001;
+			twist_msg.linear.y=0.5;
 			twist_msg.linear.z=0.0;
 			twist_msg.angular.x=0.0; 
 			twist_msg.angular.y=0.0;
@@ -58,43 +41,49 @@ int main(int argc, char** argv)
 	pub_empty_takeoff = node.advertise<std_msgs::Empty>("/ardrone/takeoff", 1); 
 	pub_empty_land = node.advertise<std_msgs::Empty>("/ardrone/land", 1);
     pub_empty_reset = node.advertise<std_msgs::Empty>("/ardrone/reset", 1); 
-
 	
-	time =(double)ros::Time::now().toSec();	  //定义这里的time变量为持续时间
-	ROS_INFO("Starting ARdrone_test loop");
-
-
+	double time;
+	time =(double)ros::Time::now().toSec();	  //定义这里的time为时间点
+	ROS_INFO("Starting ARdrone_test loop");		
 
 while (ros::ok()){  //ros::ok()检测节点是否停止工作
-			
-		if (	 (double)ros::Time::now().toSec()< time+5.0){
-		
-			pub_empty_takeoff.publish(emp_msg); //launches the drone
-			pub_twist.publish(twist_msg_hover); //drone is flat
-			ROS_INFO("Taking off");
-			}//takeoff before t+5
+	
+		if ( (double)ros::Time::now().toSec()< time +3){
+			pub_empty_takeoff.publish(emp_msg); //发布起飞消息
+			pub_twist.publish(twist_msg_hover); //悬停模式
+			ROS_INFO_ONCE("Taking off");
 
-		else if (	 (double)ros::Time::now().toSec()> time+fly_time+land_time+kill_time){
-		
-			ROS_INFO("Closing Node");
-			pub_empty_reset.publish(emp_msg); //kills the drone		
-			break; 
+			}//持续5秒
 			
-			}//kill node
+		else if  ((double)ros::Time::now().toSec()<time + 4)
+		{
+		
+			pub_twist.publish(twist_msg); //悬停
+			ROS_INFO_ONCE("FLYING");
+			}//时间大于9+5 降落
+		else if  ((double)ros::Time::now().toSec()<time + 10)
+		{
+		
+			pub_empty_land.publish(emp_msg); 
+			ROS_INFO_ONCE("landing");
+			
+			};//时间大于9+5 降落
 
-		else if (	 ((double)ros::Time::now().toSec()> time+fly_time+land_time)){
-		
-			pub_twist.publish(twist_msg_hover); //drone is flat
-			pub_empty_land.publish(emp_msg); //lands the drone
-			ROS_INFO("Landing");
-			}//land after t+15
-		
-		else
-			{	
-			//pub_twist.publish(twist_msg_pshover);
-			pub_twist.publish(twist_msg_hover);
-			ROS_INFO("Flying");
-			}//fly according to desired twist
+		//else  
+		//{
+	//	pub_empty_reset.publish(emp_msg); 
+		//	ROS_INFO("Land and Closing Node");
+			//break; 
+			
+		//	}//时间大于9+5+2后,重置飞行器,并结束 节点
+	
+	 //  else
+	//	{	
+		//	pub_twist.publish(twist_msg_pshover);
+	//		pub_empty_reset.publish(emp_msg); 
+	// ROS_INFO_ONCE("RESET");
+
+	//	};//时间小于9+5 悬停
 	
 	ros::spinOnce();      //调用该函数确保允许回调发生
 	loop_rate.sleep();   //调用对象的sleep方法产生延迟,使得循环以之前定义50Hz速度运行
@@ -102,3 +91,6 @@ while (ros::ok()){  //ros::ok()检测节点是否停止工作
 }//ros::ok
 
 }//main
+
+
+
